@@ -1,0 +1,24 @@
+buildscript {
+  dependencies {
+  }
+}
+
+allprojects {
+  apply plugin: 'eclipse'
+  apply plugin: 'idea'
+  apply plugin: 'java'
+
+  project.version '0.0.0-SNAPSHOT'//default project version is easily recognizable. Each project should override this.
+  
+  repositories {
+    mavenCentral()
+  }
+}
+
+subprojects {
+  project.group = 'gee'
+}
+
+task wrapper(type: Wrapper) {
+    gradleVersion = '1.9'
+}
