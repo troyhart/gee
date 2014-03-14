@@ -3,7 +3,7 @@ package com.nada.user;
 
 /**
  * @author thart
- *
+ * a change
  */
 public class Profile
 {
