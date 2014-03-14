@@ -14,3 +14,8 @@ task integrationTest(type: Test) {
  classpath = sourceSets.integrationTest.runtimeClasspath
  testResultsDir = file("$testResultsDir/integration")
 }
+
+//apply from: "$rootDir/gradle/databaseSetup.gradle"
+//integrationTest.dependsOn startAndPrepareDatabase
+//integrationTest.finalizedBy stopDatabase
+check.dependsOn integrationTest

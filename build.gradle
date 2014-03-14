@@ -7,8 +7,8 @@ allprojects {
   apply plugin: 'eclipse'
   apply plugin: 'idea'
   apply plugin: 'java'
-
-  project.version '0.0.0-SNAPSHOT'//default project version is easily recognizable. Each project should override this.
+  apply from: "$rootDir/gradle/integrationTest.gradle"
+  apply from: "$rootDir/gradle/versioning.gradle"
   
   repositories {
     mavenCentral()
