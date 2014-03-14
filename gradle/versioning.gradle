@@ -10,7 +10,7 @@ if (project.hasProperty("buildTimestamp")) {
     if (timestampFile.isFile()) {
         boolean uptodate = true
         def modified = timestampFile.lastModified()
-        project(':user').fileTree('src/main').visit {fte ->
+        project(":user").fileTree('src/main').visit {fte ->
             if (fte.file.isFile() && fte.lastModified > modified) {
                 uptodate = false
                 fte.stopVisiting()
