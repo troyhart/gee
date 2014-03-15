@@ -1,50 +1,91 @@
-def timestampFormat = new java.text.SimpleDateFormat('yyyyMMddHHmmssZ')
-timestampFormat.timeZone = TimeZone.getTimeZone("UTC")
+class ProjectVersion {
+  java.text.SimpleDateFormat timestampFormat = new java.text.SimpleDateFormat('yyyyMMddHHmmssZ')
+  //timestampFormat.timeZone = TimeZone.getTimeZone("UTC")
 
-ext.versionBase = rootProject.file("version.txt").text.trim()
+  Integer major
+  Integer minor
+  String itr
+  Boolean release
+  Date buildTime
+  String buildTimestamp
 
-if (project.hasProperty("buildTimestamp")) {
-  ext.buildTime = timestampFormat.parse(buildTimestamp)
-} else {
-  File timestampFile = file("$buildDir/timestamp.txt")
-  if (timestampFile.isFile()) {
-    boolean uptodate = true
-    def modified = timestampFile.lastModified()
-    project.fileTree('src/main').visit {fte ->
-      if (fte.file.isFile() && fte.lastModified > modified) {
-        uptodate = false
-        fte.stopVisiting()
-      }
-    }
-    if (!uptodate) {
-      timestampFile.setLastModified(new Date().time)
-    }
-  } else {
-    timestampFile.parentFile.mkdirs()
-    timestampFile.createNewFile()
+  ProjectVersion(Project project, Integer major, Integer minor) {
+    initBuildTime(project)
+    this.major = major
+    this.minor = minor
+    this.release = Boolean.FALSE
+    this.itr = buildTimestamp
   }
 
-  ext.buildTime = new Date(timestampFile.lastModified())
-  ext.buildTimestamp = timestampFormat.format(buildTime)
+  ProjectVersion(Project project, Integer major, Integer minor, Boolean release) {
+    this(project, major,minor)
+    this.release = release
+  }
+
+  ProjectVersion(Project project, Integer major, Integer minor, String releaseCandidate) {
+    this(project, major,minor)
+    this.release = Boolean.FALSE
+    this.itr = releaseCandidate
+  }
+  
+  private void initBuildTime(Project project) {
+
+    if (project.hasProperty("buildTimestamp")) {
+      buildTime = timestampFormat.parse(project.buildTimestamp)
+      buildTimestamp = project.buildTimestamp
+    } else {
+      File timestampFile = project.file("$project.buildDir/timestamp.txt")
+      if (timestampFile.isFile()) {
+        boolean uptodate = true
+        def modified = timestampFile.lastModified()
+        project.fileTree('src/main').visit {fte ->
+          if (fte.file.isFile() && fte.lastModified > modified) {
+            uptodate = false
+            fte.stopVisiting()
+          }
+        }
+        if (!uptodate) {
+          timestampFile.setLastModified(new Date().time)
+        }
+      } else {
+        timestampFile.parentFile.mkdirs()
+        timestampFile.createNewFile()
+      }
+      
+      buildTime = new Date(timestampFile.lastModified())
+      buildTimestamp = timestampFormat.format(buildTime)
+    }
+  }
+  
+  @Override
+  String toString() {
+    "$major.$minor${release ? '' : "-$itr"}"
+  }
 }
 
-ext.rcNumber = project.hasProperty("rcNumber") ? (project.rcNumber == null ? null : project.rcNumber.toInteger()) : null
+ext.versionFile = file("version.properties")
 
-ext.finalRelease = project.hasProperty("finalRelease")
-if (rcNumber != null && finalRelease) {
-  throw new InvalidUserDataException("Cannot set rcNumber and finalRelease at the same time")
+task loadVersion {
+  project.version = readVersion()
 }
 
-version = versionBase
-
-ext.isSnapshot = false
-if (finalRelease) {
-  // use version base
-} else if (rcNumber != null) {
-  version += "-rc-$rcNumber"
-} else {
-  isSnapshot = true
-  version += "-$buildTimestamp"
+ProjectVersion readVersion() {
+    logger.quiet 'Reading version properties'
+    
+    if (!versionFile.exists()) {
+      throw new GradleException("missing required version.properties: $versionFile.canonicalPath")
+    }
+    
+    Properties versionProps = new Properties()
+    
+    versionFile.withInputStream { stream ->
+      versionProps.load(stream)
+    }
+    
+    new ProjectVersion(project, versionProps.major.toInteger(), versionProps.minor.toInteger(), versionProps.release.toBoolean())
 }
 
-task printVersion(group: 'versioning', description: 'Prints version information') << {   logger.quiet "Version: $version"  }
+
+task printVersion(group: 'versioning', description: 'Prints version information') << {   
+    logger.quiet "Version: $version"
+}
