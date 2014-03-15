@@ -47,6 +47,4 @@ if (finalRelease) {
   version += "-$buildTimestamp"
 }
 
-task printVersion {
-  doLast { println "Version: $version" }
-}
+task printVersion << { println "Version: $version" }
