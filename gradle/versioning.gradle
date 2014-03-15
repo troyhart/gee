@@ -47,4 +47,4 @@ if (finalRelease) {
   version += "-$buildTimestamp"
 }
 
-task printVersion << { println "Version: $version" }
+task printVersion(group: 'versioning', description: 'Prints version information') << {   logger.quiet "Version: $version"  }
