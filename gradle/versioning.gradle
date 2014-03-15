@@ -4,55 +4,49 @@ timestampFormat.timeZone = TimeZone.getTimeZone("UTC")
 ext.versionBase = rootProject.file("version.txt").text.trim()
 
 if (project.hasProperty("buildTimestamp")) {
-    ext.buildTime = timestampFormat.parse(buildTimestamp)
+  ext.buildTime = timestampFormat.parse(buildTimestamp)
 } else {
-    File timestampFile = file("$buildDir/timestamp.txt")
-    if (timestampFile.isFile()) {
-        boolean uptodate = true
-        def modified = timestampFile.lastModified()
-        project(":user").fileTree('src/main').visit {fte ->
-            if (fte.file.isFile() && fte.lastModified > modified) {
-                uptodate = false
-                fte.stopVisiting()
-            }
-        }
-        if (!uptodate) {
-            timestampFile.setLastModified(new Date().time)
-        }
-    } else {
-        timestampFile.parentFile.mkdirs()
-        timestampFile.createNewFile()
+  File timestampFile = file("$buildDir/timestamp.txt")
+  if (timestampFile.isFile()) {
+    boolean uptodate = true
+    def modified = timestampFile.lastModified()
+    project.fileTree('src/main').visit {fte ->
+      if (fte.file.isFile() && fte.lastModified > modified) {
+        uptodate = false
+        fte.stopVisiting()
+      }
     }
+    if (!uptodate) {
+      timestampFile.setLastModified(new Date().time)
+    }
+  } else {
+    timestampFile.parentFile.mkdirs()
+    timestampFile.createNewFile()
+  }
 
-    ext.buildTime = new Date(timestampFile.lastModified())
-    ext.buildTimestamp = timestampFormat.format(buildTime)
+  ext.buildTime = new Date(timestampFile.lastModified())
+  ext.buildTimestamp = timestampFormat.format(buildTime)
 }
 
-//TODO: fix me! The ternary operation below throws a NullPointerException on project.rcNumber.toInteger()
-// -----------
-//ext.rcNumber = project.hasProperty("rcNumber") ? project.rcNumber.toInteger() : null
-// -----------
-ext.rcNumber = null
+ext.rcNumber = project.hasProperty("rcNumber") ? (project.rcNumber == null ? null : project.rcNumber.toInteger()) : null
 
 ext.finalRelease = project.hasProperty("finalRelease")
 if (rcNumber != null && finalRelease) {
-    throw new InvalidUserDataException("Cannot set rcNumber and finalRelease at the same time")
+  throw new InvalidUserDataException("Cannot set rcNumber and finalRelease at the same time")
 }
 
 version = versionBase
 
 ext.isSnapshot = false
 if (finalRelease) {
-    // use version base
+  // use version base
 } else if (rcNumber != null) {
-    version += "-rc-$rcNumber"
+  version += "-rc-$rcNumber"
 } else {
-    isSnapshot = true
-    version += "-$buildTimestamp"
+  isSnapshot = true
+  version += "-$buildTimestamp"
 }
 
 task printVersion {
-  doLast {
-    println "Version: $version"
-  }
+  doLast { println "Version: $version" }
 }

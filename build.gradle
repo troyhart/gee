@@ -8,7 +8,6 @@ allprojects {
   apply plugin: 'idea'
   apply plugin: 'java'
   apply from: "$rootDir/gradle/integrationTest.gradle"
-  apply from: "$rootDir/gradle/versioning.gradle"
   
   repositories {
     mavenCentral()
@@ -17,6 +16,7 @@ allprojects {
 
 subprojects {
   project.group = 'gee.modules'
+  apply from: "$rootDir/gradle/versioning.gradle"
 }
 
 task wrapper(type: Wrapper) {
