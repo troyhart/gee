@@ -38,6 +38,8 @@ class ProjectVersion {
       if (timestampFile.isFile()) {
         boolean uptodate = true
         def modified = timestampFile.lastModified()
+        // If any of the main source has changed, then
+        // the timestamp is not up to date
         project.fileTree('src/main').visit {fte ->
           if (fte.file.isFile() && fte.lastModified > modified) {
             uptodate = false
@@ -65,12 +67,8 @@ class ProjectVersion {
 
 ext.versionFile = file("version.properties")
 
-task loadVersion {
-  project.version = readVersion()
-}
-
 ProjectVersion readVersion() {
-    logger.quiet 'Reading version properties'
+    logger.quiet "Reading $versionFile.canonicalPath"
     
     if (!versionFile.exists()) {
       throw new GradleException("missing required version.properties: $versionFile.canonicalPath")
@@ -85,7 +83,23 @@ ProjectVersion readVersion() {
     new ProjectVersion(project, versionProps.major.toInteger(), versionProps.minor.toInteger(), versionProps.release.toBoolean())
 }
 
+task loadVersion(group: 'versioning', description: 'A configuration task that automatically reads the project specific version.properties file and initializes the project\'s version.') {
+  project.version = readVersion()
+}
 
-task printVersion(group: 'versioning', description: 'Prints version information') << {   
+task makeReleaseVersion(group: 'versioning', description: 'Makes project a release version.') {
+  
+  inputs.property('release', version.release)
+  outputs.file versionFile
+  
+  doLast {
+    version.release = Boolean.TRUE
+    ant.propertyfile(file: versionFile) {
+      entry(key:'release', type: 'string', operation: '=', value: 'true')
+    }
+  }
+}
+
+task printVersion(group: 'versioning', description: 'Prints version information.') << {   
     logger.quiet "Version: $version"
 }
