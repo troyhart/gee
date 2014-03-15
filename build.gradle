@@ -16,7 +16,7 @@ allprojects {
 }
 
 subprojects {
-  project.group = 'gee'
+  project.group = 'gee.modules'
 }
 
 task wrapper(type: Wrapper) {

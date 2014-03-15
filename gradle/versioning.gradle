@@ -50,3 +50,9 @@ if (finalRelease) {
     isSnapshot = true
     version += "-$buildTimestamp"
 }
+
+task printVersion {
+  doLast {
+    println "Version: $version"
+  }
+}
