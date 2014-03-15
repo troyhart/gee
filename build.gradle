@@ -1,24 +1,23 @@
-buildscript {
-  dependencies {
-  }
-}
+buildscript { dependencies { } }
 
 allprojects {
   apply plugin: 'eclipse'
   apply plugin: 'idea'
-  apply plugin: 'java'
-  apply from: "$rootDir/gradle/integrationTest.gradle"
-  
-  repositories {
-    mavenCentral()
-  }
+
+  repositories { mavenCentral() }
 }
 
 subprojects {
   project.group = 'gee.modules'
+  apply plugin: 'java'
+  apply from: "$rootDir/gradle/integrationTest.gradle"
   apply from: "$rootDir/gradle/versioning.gradle"
+
+  dependencies {
+    compile 'org.slf4j:slf4j-api:1.7.+'
+    compile 'ch.qos.logback:logback-classic:1.+'
+    testCompile 'junit:junit:4.10'
+  }
 }
 
-task wrapper(type: Wrapper) {
-    gradleVersion = '1.9'
-}
+task wrapper(type: Wrapper) { gradleVersion = '1.9' }
