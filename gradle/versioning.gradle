@@ -81,7 +81,7 @@ class ReleaseVersionTask extends DefaultTask
   void start() 
   {
     project.version.release = Boolean.TRUE
-    ant.propertyfile(file: versionPropsFile) {
+    ant.propertyfile(file: destFile) {
       entry(key:'release', type: 'string', operation: '=', value: 'true')
     }
   }
@@ -125,4 +125,30 @@ task printVersion(group: 'versioning', description: 'Prints version information.
     logger.quiet "Build Time: $version.buildTimestamp"
   }
   logger.quiet "Version: $version"
+}
+
+// create a distribution
+task createDistribution(type: Zip, dependsOn: makeReleaseVersion) {
+  // Infers dependency on war task by reference to the output of the War task.
+  from war.outputs.files
+  
+  // pull all source files into src directory of zip file.
+  from(sourceSets*.allSource) {
+    into 'src'
+  }
+  
+  // add version file to zip.
+  from(rootDir) {
+    include versionPropsFile.name
+  }
+}
+
+task backupReleaseDistribution(type: Copy) {
+  // Infers dependency on createDistribution task by reference to it's outpu
+  from createDistribution.outputs.files
+  into "$buildDir/backup"
+}
+
+task release(dependsOn: backupReleaseDistribution) << {
+  logger.quiet 'Releasing project...'
 }
