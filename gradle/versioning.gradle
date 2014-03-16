@@ -87,6 +87,33 @@ class ReleaseVersionTask extends DefaultTask
   }
 }
 
+// Add dynamic tasks for incrementing the major and minor version of 
+// the project. The change is persisted in the versionPropsFile.
+// 
+tasks.addRule("Pattern: increment<Classifier>Version -- Increments the project version classifier.") { String taskName ->
+  if (taskName.startsWith('increment') && taskName.endsWith('Version')) {
+    task(taskName) << {
+      String classifier = (taskName - 'increment' - 'Version').toLowerCase()
+      String currentVersion = version.toString()
+      
+      switch(classifier) {
+        case 'major': ++version.major
+                      break
+        case 'minor': ++version.minor
+                      break
+        default: throw new GradleException("Invalid version type '$classifier'. Allowed types: ['Major', 'Minor']")
+      }
+      
+      String newVersion = version.toString()
+      logger.info "Incrementing $classifier project version: $currentVersion -> $newVersion"
+      
+      ant.propertyfile(file: versionPropsFile) {
+        entry(key: classifier, type: 'int', operation: '+', value: 1)
+      }
+    }
+  }
+}
+
 // Reference to the project specific version information properties files.
 ext.versionPropsFile = file("version.properties")
 
