@@ -1,4 +1,5 @@
-class ProjectVersion {
+class ProjectVersion
+{
   java.text.SimpleDateFormat timestampFormat = new java.text.SimpleDateFormat('yyyyMMddHHmmssZ')
   //timestampFormat.timeZone = TimeZone.getTimeZone("UTC")
 
@@ -27,7 +28,7 @@ class ProjectVersion {
     this.release = Boolean.FALSE
     this.itr = releaseCandidate
   }
-  
+
   private void initBuildTime(Project project) {
 
     if (project.hasProperty("buildTimestamp")) {
@@ -53,53 +54,75 @@ class ProjectVersion {
         timestampFile.parentFile.mkdirs()
         timestampFile.createNewFile()
       }
-      
+
       buildTime = new Date(timestampFile.lastModified())
       buildTimestamp = timestampFormat.format(buildTime)
     }
   }
-  
+
   @Override
   String toString() {
     "$major.$minor${release ? '' : "-$itr"}"
   }
 }
 
-ext.versionFile = file("version.properties")
-
-ProjectVersion readVersion() {
-    logger.quiet "Reading $versionFile.canonicalPath"
-    
-    if (!versionFile.exists()) {
-      throw new GradleException("missing required version.properties: $versionFile.canonicalPath")
-    }
-    
-    Properties versionProps = new Properties()
-    
-    versionFile.withInputStream { stream ->
-      versionProps.load(stream)
-    }
-    
-    new ProjectVersion(project, versionProps.major.toInteger(), versionProps.minor.toInteger(), versionProps.release.toBoolean())
-}
-
-task loadVersion(group: 'versioning', description: 'A configuration task that automatically reads the project specific version.properties file and initializes the project\'s version.') {
-  project.version = readVersion()
-}
-
-task makeReleaseVersion(group: 'versioning', description: 'Makes project a release version.') {
+class ReleaseVersionTask extends DefaultTask 
+{
+  @Input Boolean release
+  @OutputFile File destFile
   
-  inputs.property('release', version.release)
-  outputs.file versionFile
+  ReleaseVersionTask() 
+  {
+    group = 'versioning'
+    description = 'Makes project a release version.'
+  }
   
-  doLast {
-    version.release = Boolean.TRUE
-    ant.propertyfile(file: versionFile) {
+  @TaskAction
+  void start() 
+  {
+    project.version.release = Boolean.TRUE
+    ant.propertyfile(file: versionPropsFile) {
       entry(key:'release', type: 'string', operation: '=', value: 'true')
     }
   }
 }
 
-task printVersion(group: 'versioning', description: 'Prints version information.') << {   
-    logger.quiet "Version: $version"
+// Reference to the project specific version information properties files.
+ext.versionPropsFile = file("version.properties")
+
+// a method that returns a new instance of a ProjectVersion object that
+// has been initialized with the project specific version information.
+ProjectVersion readVersion()  
+{
+  logger.quiet "Reading $versionPropsFile.canonicalPath"
+  
+  if (!versionPropsFile.exists()) {
+    throw new GradleException("missing required version.properties: $versionPropsFile.canonicalPath")
+  }
+  
+  Properties versionProps = new Properties()
+  
+  versionPropsFile.withInputStream { stream ->
+    versionProps.load(stream)
+  }
+  
+  new ProjectVersion(project, versionProps.major.toInteger(), versionProps.minor.toInteger(), versionProps.release.toBoolean())
+}
+
+// A configuration task that set's the project's version to the result of readVersion()
+task loadVersion(group: 'versioning', description: 'A configuration task that automatically reads the project specific version.properties file and initializes the project\'s version.') {
+  project.version = readVersion()
+}
+
+// set the version's release flag to TRUE, persisting this value in the versionPropsFile
+task makeReleaseVersion(type: ReleaseVersionTask) {
+  release = version.release
+  destFile = versionPropsFile
+}
+
+task printVersion(group: 'versioning', description: 'Prints version information.') << {
+  if (version.release) {
+    logger.quiet "Build Time: $version.buildTimestamp"
+  }
+  logger.quiet "Version: $version"
 }
