@@ -106,9 +106,6 @@ tasks.addRule("Pattern: increment<Classifier>Version -- Increments the project v
   }
 }
 
-// Reference to the project specific version information properties files.
-ext.versionPropsFile = file("version.properties")
-
 // a method that returns a new instance of a ProjectVersion object that
 // has been initialized with the project specific version information.
 ProjectVersion readVersion()  
@@ -127,6 +124,9 @@ ProjectVersion readVersion()
   
   new ProjectVersion(project, versionProps.major.toInteger(), versionProps.minor.toInteger(), versionProps.release.toBoolean())
 }
+
+// Reference to the project specific version information properties files.
+ext.versionPropsFile = file("version.properties")
 
 // A configuration task that set's the project's version to the result of readVersion()
 task loadVersion(group: 'versioning', description: 'An automatic configuraiton task; no need to execute this one.') {
