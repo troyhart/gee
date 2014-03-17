@@ -66,23 +66,15 @@ class ProjectVersion
   }
 }
 
-class ReleaseVersionTask extends DefaultTask 
-{
-  @Input Boolean release
-  @OutputFile File destFile
-  
-  ReleaseVersionTask() 
-  {
-    group = 'versioning'
-    description = 'Makes project a release version.'
-  }
-  
-  @TaskAction
-  void start() 
-  {
-    project.version.release = Boolean.TRUE
-    ant.propertyfile(file: destFile) {
-      entry(key:'release', type: 'string', operation: '=', value: 'true')
+// This lifecycle event is fired after the configuration phase and
+// before the execution phase of the build.
+gradle.taskGraph.whenReady { TaskExecutionGraph taskGraph ->
+  if (taskGraph.hasTask(release)) {
+    if(!version.release) {
+      version.release = true
+      ant.propertyfile(file: versionPropsFile) {
+        entry(key:'release', type: 'string', operation: '=', value: 'true')
+      }
     }
   }
 }
@@ -137,14 +129,8 @@ ProjectVersion readVersion()
 }
 
 // A configuration task that set's the project's version to the result of readVersion()
-task loadVersion(group: 'versioning', description: 'A configuration task that automatically reads the project specific version.properties file and initializes the project\'s version.') {
+task loadVersion(group: 'versioning', description: 'An automatic configuraiton task; no need to execute this one.') {
   project.version = readVersion()
-}
-
-// set the version's release flag to TRUE, persisting this value in the versionPropsFile
-task makeReleaseVersion(type: ReleaseVersionTask) {
-  release = version.release
-  destFile = versionPropsFile
 }
 
 task printVersion(group: 'versioning', description: 'Prints version information.') << {
@@ -155,7 +141,7 @@ task printVersion(group: 'versioning', description: 'Prints version information.
 }
 
 // create a distribution
-task createDistribution(type: Zip, dependsOn: makeReleaseVersion) {
+task createDistribution(type: Zip) {
   // Infers dependency on war task by reference to the output of the War task.
   from war.outputs.files
   
@@ -171,11 +157,11 @@ task createDistribution(type: Zip, dependsOn: makeReleaseVersion) {
 }
 
 task backupReleaseDistribution(type: Copy) {
-  // Infers dependency on createDistribution task by reference to it's outpu
+  // Infers dependency on createDistribution task by reference to it's outputs
   from createDistribution.outputs.files
   into "$buildDir/backup"
 }
 
-task release(dependsOn: backupReleaseDistribution) << {
+task release(group: 'versioning', description: 'Makes project a release version.', dependsOn: backupReleaseDistribution) << {
   logger.quiet 'Releasing project...'
 }
