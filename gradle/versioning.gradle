@@ -1,68 +1,79 @@
+import java.text.SimpleDateFormat
+import java.util.TimeZone
+
+import org.gradle.api.GradleException
+import org.gradle.api.execution.TaskExecutionGraph
+import org.gradle.api.tasks.Copy
+import org.gradle.api.tasks.bundling.Zip
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+
 class ProjectVersion
 {
-  java.text.SimpleDateFormat timestampFormat = new java.text.SimpleDateFormat('yyyyMMddHHmmssZ')
-  //timestampFormat.timeZone = TimeZone.getTimeZone("UTC")
-
-  Integer major
-  Integer minor
-  String itr
-  Boolean release
+  static SimpleDateFormat timestampFormat = new SimpleDateFormat('yyyyMMddHHmmssZ')
+  static {
+    timestampFormat.timeZone = TimeZone.getTimeZone("UTC")
+  }
+  
+  File propertiesFile
+  
+  // version.properties attributes
+  private Integer major
+  private Integer minor
+  private Integer patch
+  // timestamp.txt lastModified attribute
   Date buildTime
-  String buildTimestamp
+  
+  boolean release = false
+  String buildLabel
 
-  ProjectVersion(Project project, Integer major, Integer minor) {
-    initBuildTime(project)
-    this.major = major
-    this.minor = minor
-    this.release = Boolean.FALSE
-    this.itr = buildTimestamp
-  }
-
-  ProjectVersion(Project project, Integer major, Integer minor, Boolean release) {
-    this(project, major,minor)
-    this.release = release
-  }
-
-  ProjectVersion(Project project, Integer major, Integer minor, String releaseCandidate) {
-    this(project, major,minor)
-    this.release = Boolean.FALSE
-    this.itr = releaseCandidate
-  }
-
-  private void initBuildTime(Project project) {
-
-    if (project.hasProperty("buildTimestamp")) {
-      buildTime = timestampFormat.parse(project.buildTimestamp)
-      buildTimestamp = project.buildTimestamp
-    } else {
-      File timestampFile = project.file("$project.buildDir/timestamp.txt")
-      if (timestampFile.isFile()) {
-        boolean uptodate = true
-        def modified = timestampFile.lastModified()
-        // If any of the main source has changed, then
-        // the timestamp is not up to date
-        project.fileTree('src/main').visit {fte ->
-          if (fte.file.isFile() && fte.lastModified > modified) {
-            uptodate = false
-            fte.stopVisiting()
-          }
+  ProjectVersion(Project project) {
+    propertiesFile = project.file("version.properties")
+    if (!propertiesFile.exists()) {
+      throw new GradleException("missing required version.properties: $propertiesFile.canonicalPath")
+    }
+    Properties versionProps = new Properties()
+    propertiesFile.withInputStream { stream ->
+      versionProps.load(stream)
+    }
+    
+    this.major = versionProps.major.toInteger()
+    this.minor = versionProps.minor.toInteger()
+    this.patch = versionProps.patch.toInteger()
+    
+    File timestampFile = project.file("$project.buildDir/timestamp.txt")
+    if (timestampFile.isFile()) {
+      boolean uptodate = true
+      Date modified = new Date(timestampFile.lastModified())
+      // If any of the main source has changed, then
+      // the timestamp is not up to date
+      project.fileTree('src/main').visit { fte ->
+        if (fte.file.isFile() && fte.lastModified > modified.time) {
+          uptodate = false
+          fte.stopVisiting()
         }
-        if (!uptodate) {
-          timestampFile.setLastModified(new Date().time)
-        }
-      } else {
-        timestampFile.parentFile.mkdirs()
-        timestampFile.createNewFile()
       }
-
-      buildTime = new Date(timestampFile.lastModified())
-      buildTimestamp = timestampFormat.format(buildTime)
+      if (!uptodate) {
+        // update the last modified date on the timestamp file
+        timestampFile.setLastModified(new Date().time)
+      }
+    } else {
+      timestampFile.parentFile.mkdirs()
+      // create a new timestamp file
+      timestampFile.createNewFile()
+    }
+    
+    this.buildTime = new Date(timestampFile.lastModified())
+    if (project.hasProperty('releaseCandidate')) {
+      this.buildLabel = project.releaseCandidate
+    } else {
+      this.buildLabel = "SNAPSHOT-${timestampFormat.format(buildTime)}"
     }
   }
-
+  
   @Override
   String toString() {
-    "$major.$minor${release ? '' : "-$itr"}"
+    "$major.$minor.$patch${release ? '' : "-$buildLabel"}"
   }
 }
 
@@ -70,80 +81,60 @@ class ProjectVersion
 // before the execution phase of the build.
 gradle.taskGraph.whenReady { TaskExecutionGraph taskGraph ->
   if (taskGraph.hasTask(release)) {
-    if(!version.release) {
-      version.release = true
-      ant.propertyfile(file: versionPropsFile) {
-        entry(key:'release', type: 'string', operation: '=', value: 'true')
-      }
+    if(!project.version.release) {
+      project.version.release = true
     }
   }
 }
 
 // Add dynamic tasks for incrementing the major and minor version of 
-// the project. The change is persisted in the versionPropsFile.
+// the project. The change is persisted in version.propertiesFile.
 // 
 tasks.addRule("Pattern: increment<Classifier>Version -- Increments the project version classifier.") { String taskName ->
   if (taskName.startsWith('increment') && taskName.endsWith('Version')) {
     task(taskName) << {
       String classifier = (taskName - 'increment' - 'Version').toLowerCase()
-      String currentVersion = version.toString()
+      String currentVersion = project.version.toString()
       
       switch(classifier) {
-        case 'major': ++version.major
+        case 'major': ++project.version.major
                       break
-        case 'minor': ++version.minor
+        case 'minor': ++project.version.minor
+                      break
+        case 'patch': ++project.version.patch
                       break
         default: throw new GradleException("Invalid version type '$classifier'. Allowed types: ['Major', 'Minor']")
       }
       
-      String newVersion = version.toString()
+      String newVersion = project.version.toString()
       logger.info "Incrementing $classifier project version: $currentVersion -> $newVersion"
       
-      ant.propertyfile(file: versionPropsFile) {
+      ant.propertyfile(file: project.version.propertiesFile) {
         entry(key: classifier, type: 'int', operation: '+', value: 1)
       }
     }
   }
 }
 
-// a method that returns a new instance of a ProjectVersion object that
-// has been initialized with the project specific version information.
-ProjectVersion readVersion()  
-{
-  logger.quiet "Reading $versionPropsFile.canonicalPath"
-  
-  if (!versionPropsFile.exists()) {
-    throw new GradleException("missing required version.properties: $versionPropsFile.canonicalPath")
-  }
-  
-  Properties versionProps = new Properties()
-  
-  versionPropsFile.withInputStream { stream ->
-    versionProps.load(stream)
-  }
-  
-  new ProjectVersion(project, versionProps.major.toInteger(), versionProps.minor.toInteger(), versionProps.release.toBoolean())
-}
-
-// Reference to the project specific version information properties files.
-ext.versionPropsFile = file("version.properties")
-
 // A configuration task that set's the project's version to the result of readVersion()
 task loadVersion(group: 'versioning', description: 'An automatic configuraiton task; no need to execute this one.') {
-  project.version = readVersion()
+  project.version = new ProjectVersion(project)
 }
 
 task printVersion(group: 'versioning', description: 'Prints version information.') << {
-  if (version.release) {
-    logger.quiet "Build Time: $version.buildTimestamp"
+  if (project.version.release) {
+    logger.quiet "Build Time: ${project.version.timestampFormat.format(project.version.buildTime)}"
   }
   logger.quiet "Version: $version"
 }
 
-// create a distribution
+// Perhaps there is no place in our build system for a distribution creation
+// task such as this one. I need to get clear on the role of the CD build
+// server, in its interactions with the build script.
+//
 task createDistribution(type: Zip) {
-  // Infers dependency on war task by reference to the output of the War task.
-  from war.outputs.files
+  // Infers dependency on jar task by reference to its output.
+  from jar.outputs.files
   
   // pull all source files into src directory of zip file.
   from(sourceSets*.allSource) {
@@ -152,7 +143,7 @@ task createDistribution(type: Zip) {
   
   // add version file to zip.
   from(rootDir) {
-    include versionPropsFile.name
+    include project.version.propertiesFile.name
   }
 }
 
@@ -163,5 +154,5 @@ task backupReleaseDistribution(type: Copy) {
 }
 
 task release(group: 'versioning', description: 'Makes project a release version.', dependsOn: backupReleaseDistribution) << {
-  logger.quiet 'Releasing project...'
+  logger.quiet "Releasing $project.name-$project.version"
 }

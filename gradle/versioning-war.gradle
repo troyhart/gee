@@ -1,0 +1,15 @@
+
+task createDistribution(type: Zip) {
+  // Infers dependency on war task by reference to the output of the War task.
+  from war.outputs.files,
+  
+  // pull all source files into src directory of zip file.
+  from(sourceSets*.allSource) {
+    into 'src'
+  }
+  
+  // add version file to zip.
+  from(rootDir) {
+    include versionPropsFile.name
+  }
+}

@@ -10,7 +10,6 @@ allprojects {
 subprojects {
   project.group = 'gee.modules'
   apply plugin: 'java'
-  apply plugin: 'war'
   apply from: "$rootDir/gradle/integrationTest.gradle"
   apply from: "$rootDir/gradle/versioning.gradle"
 
