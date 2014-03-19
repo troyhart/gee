@@ -1,6 +1,15 @@
+*.class
+
+# Package Files #
+*.jar
+*.war
+*.ear
+
 build/
+
 .gradle/
 .settings/
 .classpath
 .project
+
 build-timestamp.txt
