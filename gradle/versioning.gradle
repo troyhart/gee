@@ -115,7 +115,7 @@ task loadVersion(group: 'versioning', description: 'An automatic configuraiton t
 
 task printVersion(group: 'versioning', description: 'Prints version information.') << {
   if (project.version.release) {
-    logger.quiet "Build Time: ${project.version.timestampFormat.format(project.version.buildTime)}"
+    logger.quiet "Build Time: $project.version.buildTime"
   }
   logger.quiet "Version: $version"
 }
