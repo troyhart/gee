@@ -58,6 +58,14 @@ class ProjectVersion
         timestampFile.setLastModified(new Date().time)
       }
     } else {
+      // TODO: determine why this block doesn't write a file to the filesystem when
+      // the build command contains "clean", like:
+      // ./gradlew clean build
+      //
+      // Look at the build directories and see that timestamp.txt is not there. 
+      // However, this block of code does execute and the remainder of the code
+      // in this method does use the lastModified attribute of this file reference
+      // it just doesn't get written to the filesystem.
       timestampFile.parentFile.mkdirs()
       // create a new timestamp file
       timestampFile.createNewFile()
