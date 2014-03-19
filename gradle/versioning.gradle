@@ -16,6 +16,7 @@ class ProjectVersion
   }
   
   File propertiesFile
+  File timestampFile
   
   // version.properties attributes
   private Integer major
@@ -40,8 +41,8 @@ class ProjectVersion
     this.major = versionProps.major.toInteger()
     this.minor = versionProps.minor.toInteger()
     this.patch = versionProps.patch.toInteger()
-    
-    File timestampFile = project.file("$project.buildDir/timestamp.txt")
+
+    timestampFile = project.file("build-timestamp.txt")
     if (timestampFile.isFile()) {
       boolean uptodate = true
       Date modified = new Date(timestampFile.lastModified())
@@ -58,16 +59,7 @@ class ProjectVersion
         timestampFile.setLastModified(new Date().time)
       }
     } else {
-      // TODO: determine why this block doesn't write a file to the filesystem when
-      // the build command contains "clean", like:
-      // ./gradlew clean build
-      //
-      // Look at the build directories and see that timestamp.txt is not there. 
-      // However, this block of code does execute and the remainder of the code
-      // in this method does use the lastModified attribute of this file reference
-      // it just doesn't get written to the filesystem.
       timestampFile.parentFile.mkdirs()
-      // create a new timestamp file
       timestampFile.createNewFile()
     }
     
@@ -121,13 +113,6 @@ task loadVersion(group: 'versioning', description: 'An automatic configuraiton t
   project.version = new ProjectVersion(project)
 }
 
-task printVersion(group: 'versioning', description: 'Prints version information.') << {
-  if (project.version.release) {
-    logger.quiet "Build Time: $project.version.buildTime"
-  }
-  logger.quiet "Version: $version"
-}
-
 // Perhaps there is no place in our build system for a distribution creation
 // task such as this one. I need to get clear on the role of the CD build
 // server, in its interactions with the build script.
@@ -145,4 +130,36 @@ task sourceDistribution(type: Zip) {
   from(rootDir) {
     include project.version.propertiesFile.name
   }
+}
+
+void listDirectory(Integer level, File directory) { 
+  def files = directory.listFiles()
+  for (int f=0; f<files.size(); f++) {
+    for (int i=0; i<level; i++) {
+      print '    '
+    }
+    if (f < files.size()-1) {
+      print '├── '
+    } else {
+      print '└── '
+    }
+    print files[f].name
+    println files[f].directory ? " [D --> count: ${files[f].listFiles().size()}; modified: ${new Date(files[f].lastModified())}]" : " [F --> size: ${files[f].size()}; modified: ${new Date(files[f].lastModified())}]"
+    if (files[f].directory) {
+      listDirectory(level+1, files[f])
+    }
+  }
+}
+
+task printVersion(group: 'versioning', description: 'Prints version information.') << {
+  if (project.version.release) {
+    logger.quiet "Build Time: $project.version.buildTime"
+  }
+  logger.quiet "Version: $version"
+}
+
+task showBuildDir(group: 'versioning', description: 'Depends on \'build\' and then lists the build directory.', dependsOn: 'build') << {
+  println "$project.version.timestampFile.name --> ${new Date(project.version.timestampFile.lastModified())}"
+  println "$buildDir.name [D --> count: ${buildDir.listFiles().size()}; modified: ${new Date(buildDir.lastModified())}]"
+  listDirectory(0,buildDir)
 }
