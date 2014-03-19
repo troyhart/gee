@@ -24,7 +24,7 @@ class ProjectVersion
   // timestamp.txt lastModified attribute
   Date buildTime
   
-  boolean release = false
+  boolean release
   String buildLabel
 
   ProjectVersion(Project project) {
@@ -63,6 +63,8 @@ class ProjectVersion
       timestampFile.createNewFile()
     }
     
+    this.release = project.hasProperty('release') ? project.release : false
+    
     this.buildTime = new Date(timestampFile.lastModified())
     if (project.hasProperty('releaseCandidate')) {
       this.buildLabel = project.releaseCandidate
@@ -74,16 +76,6 @@ class ProjectVersion
   @Override
   String toString() {
     "$major.$minor.$patch${release ? '' : "-$buildLabel"}"
-  }
-}
-
-// This lifecycle event is fired after the configuration phase and
-// before the execution phase of the build.
-gradle.taskGraph.whenReady { TaskExecutionGraph taskGraph ->
-  if (taskGraph.hasTask(release)) {
-    if(!project.version.release) {
-      project.version.release = true
-    }
   }
 }
 
@@ -132,7 +124,7 @@ task printVersion(group: 'versioning', description: 'Prints version information.
 // task such as this one. I need to get clear on the role of the CD build
 // server, in its interactions with the build script.
 //
-task createDistribution(type: Zip) {
+task sourceDistribution(type: Zip) {
   // Infers dependency on jar task by reference to its output.
   from jar.outputs.files
   
@@ -145,14 +137,4 @@ task createDistribution(type: Zip) {
   from(rootDir) {
     include project.version.propertiesFile.name
   }
-}
-
-task backupReleaseDistribution(type: Copy) {
-  // Infers dependency on createDistribution task by reference to it's outputs
-  from createDistribution.outputs.files
-  into "$buildDir/backup"
-}
-
-task release(group: 'versioning', description: 'Makes project a release version.', dependsOn: backupReleaseDistribution) << {
-  logger.quiet "Releasing $project.name-$project.version"
 }
