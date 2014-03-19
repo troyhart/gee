@@ -1,4 +1,7 @@
 dependencies {
   compile project(':catalog')
   compile project(':user')
+  
+  // TODO: declare dependency on new auth library.
+  // -- need to get publishing working. 
 }
