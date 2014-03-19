@@ -151,14 +151,14 @@ void listDirectory(Integer level, File directory) {
   }
 }
 
-task printVersion(group: 'versioning', description: 'Prints version information.') << {
+task printVersion(dependsOn: 'build', group: 'versioning', description: 'Prints version information.') << {
   if (project.version.release) {
     logger.quiet "Build Time: $project.version.buildTime"
   }
   logger.quiet "Version: $version"
 }
 
-task showBuildDir(group: 'versioning', description: 'Depends on \'build\' and then lists the build directory.', dependsOn: 'build') << {
+task showBuildArtifacts(dependsOn: 'printVersion', group: 'versioning', description: 'Depends on \'build\' and then lists the build directory.') << {
   println "$project.version.timestampFile.name --> ${new Date(project.version.timestampFile.lastModified())}"
   println "$buildDir.name [D --> count: ${buildDir.listFiles().size()}; modified: ${new Date(buildDir.lastModified())}]"
   listDirectory(0,buildDir)
