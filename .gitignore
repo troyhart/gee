@@ -11,5 +11,6 @@ build/
 .settings/
 .classpath
 .project
+.vagrant/
 
 build-timestamp.txt
