@@ -1,0 +1,20 @@
+
+
+// Perhaps there is no place in our build system for a distribution creation
+// task such as this one. I need to get clear on the role of the CD build
+// server, in its interactions with the build script.
+//
+task sourceDistribution(type: Zip) {
+    // Infers dependency on jar task by reference to its output.
+    from jar.outputs.files
+
+    // pull all source files into src directory of zip file.
+    from(sourceSets*.allSource) {
+        into 'src'
+    }
+
+    // add version file to zip.
+    from(rootDir) {
+        include project.version.propertiesFile.name
+    }
+}

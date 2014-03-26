@@ -1,0 +1,39 @@
+configurations {
+  hibernateJpaModelGenTool {
+    description = "Dependencies for running the Hibernate JPA Metamodel Generator AnnotationProcessor tool"
+  }
+}
+
+dependencies {
+  hibernateJpaModelGenTool( 'org.hibernate:hibernate-jpamodelgen:1.1.1.Final' )
+}
+
+// this stuff, and a few lines above, are from the hibernate gradle build files available at https://github.com/hibernate/hibernate-orm
+
+sourceSets.main { // TODO: consider renaming this b/c "main" doesn't really mean anything
+    ext.generatedJpaMetamodelSrcDir = file( "${buildDir}/generated-src/jpamodelgen/${name}" )
+    java.srcDir generatedJpaMetamodelSrcDir
+}
+task generateJpaMetamodelClasses(type: Compile) { // TODO: make sure this task shows up in list
+    description "Processes entity annotations and generates JPA metamodel classes using hibernate-jpamodelgen"
+    classpath = compileJava.classpath + configurations.hibernateJpaModelGenTool
+    source = sourceSets.main.java
+    destinationDir = file( "${buildDir}/tmp/apt" )
+    options.define(
+            compilerArgs: [
+                    "-proc:only",
+                    "-processor", "org.hibernate.jpamodelgen.JPAMetaModelEntityProcessor",
+                    "-s", "$sourceSets.main.generatedJpaMetamodelSrcDir.absolutePath"
+            ]
+    );
+    outputs.dir sourceSets.main.generatedJpaMetamodelSrcDir;
+    doFirst {
+        logger.info("Before generating JPA metamodel classes, deleting and recreating this dir for generated source files: "+sourceSets.main.generatedJpaMetamodelSrcDir)
+        delete(sourceSets.main.generatedJpaMetamodelSrcDir)
+        sourceSets.main.generatedJpaMetamodelSrcDir.mkdirs()
+    }
+}
+// for the time being eat the annoying output from running the annotation processors
+compileJava.dependsOn generateJpaMetamodelClasses
+compileJava.options.define(compilerArgs: ["-proc:none", "-encoding", "UTF-8"])
+

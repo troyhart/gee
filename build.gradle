@@ -10,11 +10,19 @@ allprojects {
   }
 }
 
+ext.archivesBaseName = 'gee'
+
 subprojects {
   project.group = 'gee.modules'
+
   apply plugin: 'java'
   apply from: "$rootDir/gradle/integrationTest.gradle"
   apply from: "$rootDir/gradle/versioning.gradle"
+  apply from: "$rootDir/gradle/distributing.gradle"
+  apply from: "$rootDir/gradle/troubleshooting.gradle"
+
+  archivesBaseName = project.parent.archivesBaseName + "-" + project.name
+  jar.baseName = archivesBaseName
 
   dependencies {
     compile 'org.slf4j:slf4j-api:1.7.+'
