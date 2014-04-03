@@ -21,7 +21,8 @@ subprojects {
   apply from: "$rootDir/gradle/distributing.gradle"
   apply from: "$rootDir/gradle/troubleshooting.gradle"
 
-  archivesBaseName = project.parent.archivesBaseName + "-" + project.name
+  archivesBaseName = project.parent.archivesBaseName + "-" + project.name  
+  eclipse.project.name = archivesBaseName  
   jar.baseName = archivesBaseName
 
   dependencies {
