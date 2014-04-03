@@ -10,6 +10,6 @@ task createDistribution(type: Zip) {
   
   // add version file to zip.
   from(rootDir) {
-    include versionPropsFile.name
+    include project.version.propertiesFile.name
   }
 }

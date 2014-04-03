@@ -1,0 +1,5 @@
+apply plugin: 'war'
+apply from: "$rootDir/gradle/versioning-war.gradle"
+
+war.baseName = project.archivesBaseName
+

@@ -1,3 +1,8 @@
 include 'user'
 include 'catalog'
 include 'store'
+include 'user:rest'
+include 'catalog:rest'
+include 'user:war'
+include 'catalog:war'
+include 'store:war'

@@ -1,0 +1,15 @@
+Scattered throughout the gee sub-projects you will find various import.sql files. These files will 
+always be located in a "resources" source folder and as such will be built into a location where they end 
+up on the root of the classpath for the given project--either for test or for application initialization. 
+The context for each file (the need it fulfills) is discrete and therefore the contents of each file is 
+also unique. Please exercise some restraint when populating these files so as to not create a big maintenance
+problem.
+
+At runtime (either during test or application startup) when the hibernate property "hibernate.hbm2ddl.auto" 
+is set to "create" or "create-drop" hibernate will look for a file called import.sql in the root of the 
+classpath and will execute the sql contained within the file to seed the database. Each complete sql statement 
+must be contained on a single line.
+
+For more information refer to: 
+
+  - http://stackoverflow.com/questions/673802/how-to-import-initial-data-to-database-with-hibernate

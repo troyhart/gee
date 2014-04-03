@@ -1,0 +1,2 @@
+-- Refer to /gee/import.sql.README for important information regarding 
+-- the usage of this file.

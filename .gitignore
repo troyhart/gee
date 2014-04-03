@@ -12,5 +12,7 @@ build/
 .classpath
 .project
 .vagrant/
+.idea
+*.iml
 
-build-timestamp.txt
+.build.gradle.timestamp

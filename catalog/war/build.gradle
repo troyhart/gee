@@ -1,0 +1,7 @@
+apply plugin: 'war'
+
+war.baseName = project.archivesBaseName
+
+dependencies {
+    compile project(':catalog:rest')
+}
